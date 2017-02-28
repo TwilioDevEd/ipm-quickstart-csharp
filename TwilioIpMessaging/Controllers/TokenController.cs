@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Web;
+﻿using System.Configuration;
 using System.Web.Mvc;
-using Twilio;
-using Twilio.Auth;
-using JWT;
 using Faker;
+using Twilio.Jwt.AccessToken;
+using System.Collections.Generic;
 
 namespace TwilioIpMessaging.Controllers
 {
@@ -17,27 +12,29 @@ namespace TwilioIpMessaging.Controllers
         public ActionResult Index(string Device)
         {
             // Load Twilio configuration from Web.config
-            var AccountSid = ConfigurationManager.AppSettings["TwilioAccountSid"];
-            var ApiKey = ConfigurationManager.AppSettings["TwilioApiKey"];
-            var ApiSecret = ConfigurationManager.AppSettings["TwilioApiSecret"];
-            var IpmServiceSid = ConfigurationManager.AppSettings["TwilioIpmServiceSid"];
+            var accountSid = ConfigurationManager.AppSettings["TwilioAccountSid"];
+            var apiKey = ConfigurationManager.AppSettings["TwilioApiKey"];
+            var apiSecret = ConfigurationManager.AppSettings["TwilioApiSecret"];
+            var ipmServiceSid = ConfigurationManager.AppSettings["TwilioIpmServiceSid"];
 
             // Create a random identity for the client
-            var Identity = Internet.UserName();
-
-            // Create an Access Token generator
-            var Token = new AccessToken(AccountSid, ApiKey, ApiSecret);
-            Token.Identity = Identity;
+            var identity = Internet.UserName();
 
             // Create an IP messaging grant for this token
             var grant = new IpMessagingGrant();
-            grant.EndpointId = $"TwilioChatDemo:{Identity}:{Device}";
-            grant.ServiceSid = IpmServiceSid;
-            Token.AddGrant(grant);
+            grant.EndpointId = $"TwilioChatDemo:{identity}:{Device}";
+            grant.ServiceSid = ipmServiceSid;
+            var grants = new HashSet<IGrant>
+            {
+                { grant }
+            };
+
+            // Create an Access Token generator
+            var Token = new Token(accountSid, apiKey, apiSecret, identity: identity, grants: grants);
 
             return Json(new {
-                identity = Identity,
-                token = Token.ToJWT()
+                identity = identity,
+                token = Token.ToJwt()
             }, JsonRequestBehavior.AllowGet);
         }
     }
